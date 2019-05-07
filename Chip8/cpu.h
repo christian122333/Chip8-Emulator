@@ -4,7 +4,12 @@
 typedef unsigned char BYTE;		
 typedef unsigned short WORD;
 
-void initalize(void);
+extern BYTE memory[4096];
+extern BYTE V[16];
+extern BYTE key[16];
+extern WORD I;  // Index register
+
+void init_cpu(void);
 void cycle(void); // Emulate one cycle of the Chip 8 CPU
 
 void fetch(void);
