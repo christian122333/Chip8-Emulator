@@ -1,6 +1,6 @@
 # CHIP-8 Emulator
 
-### INVADERS
+### SPACE INVADERS
 ![](space_invaders.gif)
 
 ### TETRIS
