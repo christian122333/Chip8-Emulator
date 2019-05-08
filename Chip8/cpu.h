@@ -9,11 +9,21 @@ extern BYTE V[16];
 extern BYTE key[16];
 extern WORD I;  // Index register
 
+/* initalize various variables of the cpu, clears screen, stack and key, and loads chip8 font data into memory at 0x00 */
 void init_cpu(void);
-void cycle(void); // Emulate one cycle of the Chip 8 CPU
 
+/* loads each byte of the game program into memory starting at 0x200 */
+void load_rom(char *filename);
+
+/* emulate one cycle of the Chip 8 CPU */
+void cycle(void); 
+
+/* retrieves two bytes from two consecutive addresses and increments pc by 2 */
 void fetch(void);
+
+/* decodes the opcode and then executes it */
 void execute(void);
+
 
 typedef void(*functionPointers[16])(void);
 

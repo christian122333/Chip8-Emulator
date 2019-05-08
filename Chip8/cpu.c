@@ -1,17 +1,21 @@
 #include <stdlib.h>
+#include <stdio.h>
+#include <errno.h>
+#include <string.h>
 #include "cpu.h"
 #include "graphics.h"
+#include "input.h"
 
 BYTE memory[4096]; // Chip8 has 4KB of total memory
 BYTE V[16];	// 15 8-bit general purpose registers from V0-VE. The 16th register is used for the 'carry flag'
-WORD pc = 0x200; // Program counter
-WORD opcode = 0;
-WORD I = 0;
-BYTE key[16] = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
-BYTE delay_timer = 0;
-BYTE sound_timer = 0;
-WORD stack[16] = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
-WORD sp = 0;
+WORD pc; // Program counter
+WORD opcode;
+WORD I;
+BYTE key[16];
+BYTE delay_timer;
+BYTE sound_timer;
+WORD stack[16];
+BYTE sp;
 
 void (*chip8Table[16])() = {
     Opcode0, Opcode1, Opcode2, Opcode3,
@@ -19,29 +23,43 @@ void (*chip8Table[16])() = {
     Opcode8, Opcode9, OpcodeA, OpcodeB,
     OpcodeC, OpcodeD, OpcodeE, OpcodeF,
 };
-/*	Memory Map
-0x000-0x1FF - Chip 8 interpreter
-*/
 
-/*
 void init_cpu() {
 	pc = 0x200;  // Program counter starts at 0x200
 	opcode = 0;  // Reset current opcode
 	I = 0;       // Reset index register
 	sp = 0;      // Reset stack pointer
+    delay_timer = 0;
+    sound_timer = 0;
     // Clear display
     screen_clear();
-    // Clear stack
+    // Clear stack and key
     for (int index = 0; index < 16; index++) {
         stack[index] = 0;
+        key[index] = 0;
     }
-    // Clear
+    for (int index = 0; index < 80; index++) {
+        memory[index] = chip8_font[index];
+    }
 }
-*/
+
+
+void load_rom(char *filename) {
+    FILE *fp;
+    errno_t err;
+    if(err = fopen_s(&fp, filename, "rb") != 0){
+        // file could not be opened. fp was set to NULL
+        printf("file could not be opened");
+    }
+    else {
+        fread(&memory[0x200], 0xFFF, 1, fp);
+        fclose(fp);
+    }
+}
 
 void fetch(){
 	/* The opcode contains two bytes. Since each address contains one byte, we fetch two successive bytes and merge them to get the opcode */
-	opcode = memory[pc] << 8 | memory[pc + 1];
+    opcode = memory[pc] << 8 | memory[pc + 1];
     pc += 2;
 }
 
@@ -54,12 +72,16 @@ void execute() {
 
 void cycle() {
     execute();
-    sound_timer = (sound_timer + 1) % 60;
-    delay_timer = (delay_timer + 1) % 60;
+    
+    if (sound_timer > 0) {
+        sound_timer--;
+    }
+    if (delay_timer > 0) {
+        delay_timer--;
+    }
 }
 
 /* Opcode functions */
-
 void Opcode0(){
     switch (opcode & 0x000F)
     {
@@ -71,7 +93,8 @@ void Opcode0(){
         pc = stack[sp];
         stack[sp] = 0;
         break;
-    default:      /* Opcode not valid */
+    default:    /* Opcode not valid */
+        printf("opcode not valid");
         break;
     }
 };
@@ -146,9 +169,9 @@ void Opcode8(){
         y = V[(opcode & 0x00F0) >> 4];
         V[(opcode & 0x0F00) >> 8] = V[(opcode & 0x0F00) >> 8] - V[(opcode & 0x00F0) >> 4];
         if (y > x)
-            V[15] = 1;
-        else
             V[15] = 0;
+        else
+            V[15] = 1;
         break;
     case 0x0006:  /* 0x8XY6 stores the least significant bit of V[X] in V[15] then shift V[X] to the right by 1*/
         V[15] = V[(opcode & 0x0F00) >> 8] & 0x0001;
@@ -159,15 +182,16 @@ void Opcode8(){
         y = V[(opcode & 0x00F0) >> 4];
         V[(opcode & 0x0F00) >> 8] = V[(opcode & 0x00F0) >> 4] - V[(opcode & 0x0F00) >> 8];
         if (x > y)
-            V[15] = 1;
-        else
             V[15] = 0;
+        else
+            V[15] = 1;
         break;
     case 0x000E:  /* 0x8XYE stores the most significant bit of V[X] in V[15] then shift V[X] to the left by 1 */
-        V[15] = V[(opcode & 0x0F00) >> 8] & 0x8000;
+        V[15] = V[(opcode & 0x0F00) >> 8] >> 7;
         V[(opcode & 0x0F00) >> 8] = V[(opcode & 0x0F00) >> 8] << 1;
         break;
-    default:      /* Opcode not valid */
+    default:    /* Opcode not valid */
+        printf("opcode not valid");
         break;
     }
 };
@@ -190,7 +214,7 @@ void OpcodeB(){
 
 void OpcodeC(){
     /* 0xCXNN sets V[X] to the result of a bitwise AND operation on random number(0 to 255) and NN */
-    V[(opcode & 0x0F00) >> 8] = (rand() % 256) & (opcode & 0x00FF);
+    V[(opcode & 0x0F00) >> 8] = rand() & (opcode & 0x00FF);
 };
 
 void OpcodeD(){
@@ -202,12 +226,15 @@ void OpcodeE(){
     switch (opcode & 0x000F) 
     {
     case 0x000E: /* 0xEX9E skips the next instruction if the key stores in V[X] is pressed */
-        if (key[(opcode & 0x0F00) >> 8] == 1)
+        if (key[V[(opcode & 0x0F00) >> 8]] == 1)
             pc += 2;
         break;
     case 0x0001: /* 0xEXA1 skips the next instruction if the key stored in V[X] isn't pressed */
-        if (key[(opcode & 0x0F00) >> 8] == 0)
+        if (key[V[(opcode & 0x0F00) >> 8]] == 0)
             pc += 2;
+        break;
+    default:    /* Opcode not valid */
+        printf("opcode not valid");
         break;
     }
 };
@@ -219,7 +246,10 @@ void OpcodeF(){
         V[(opcode & 0x0F00) >> 8] = delay_timer;
         break;
     case 0x000A: /* 0xFX0A a key press is awaited, and then stored in V[X] */
-        waitKey((opcode & 0x0F00) >> 8);
+        V[(opcode & 0x0F00) >> 8]  = wait_key();
+        if (V[(opcode & 0x0F00) >> 8] == 0xFF) {  // there are no keys pressed. Decrement pc by 2 so this opcode can be repeated to check for key again
+            pc -= 2;
+        }
         break;
     case 0x0015: /* 0xFX15 sets the delay timer to V[X] */
         delay_timer = V[(opcode & 0x0F00) >> 8];
@@ -231,7 +261,7 @@ void OpcodeF(){
         I += V[(opcode & 0x0F00) >> 8];
         break;
     case 0x0029: /* 0xFX29 sets I to the location of the sprite for the character in V[X] */
-        I = V[(opcode & 0x0F00) >> 8];
+        I = V[(opcode & 0x0F00) >> 8] * 5; // there are 16 fonts that are 5 bytes each. The first font starts at address 0x00 with the last font at address 0x50
         break;
     case 0x0033: /* 0xFX33 stores the binary-coded decimal representation of V[X] */
         memory[I] = V[(opcode & 0x0F00) >> 8] / 100;           // hundrends
@@ -242,13 +272,16 @@ void OpcodeF(){
         for (int n = 0; n <= (opcode & 0x0F00) >> 8; n++) {
             memory[I + n] = V[n];
         }
+        //I = I + ((opcode & 0x0F00) >> 8) + 1;
         break;
     case 0x0065: /* 0xFX65 fills V[0] to V[X] with values from memory starting at address I */
         for (int n = 0; n <= (opcode & 0x0F00) >> 8; n++) {
             V[n] = memory[I + n];
         }
+        //I = I + ((opcode & 0x0F00) >> 8) + 1;
         break;
     default:    /* Opcode not valid */
+        printf("opcode not valid");
         break;
     }
 };

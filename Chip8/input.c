@@ -10,10 +10,11 @@ enum KeyPress {
 
 SDL_Event e;
 
-void handleInput() {
+void handle_input() {
     while (SDL_PollEvent(&e)) {
         /* Key was pressed */
         if (e.type == SDL_KEYDOWN) {
+            
             switch (e.key.keysym.sym)
             {
             case SDLK_1:
@@ -68,7 +69,8 @@ void handleInput() {
         }
         
         /* Key was released */
-        if (e.type == SDL_KEYUP) {
+        else if (e.type == SDL_KEYUP) {
+            
             switch (e.key.keysym.sym)
             {
             case SDLK_1:
@@ -125,76 +127,11 @@ void handleInput() {
 }
 
 
-void waitKey(BYTE index) {
-    while (SDL_PollEvent(&e)) {
-        if (e.type == SDL_KEYDOWN) {
-            switch (e.key.keysym.sym)
-            {
-            case SDLK_1:
-                key[KEY_PRESS_1] = 1;
-                V[index] = KEY_PRESS_1;
-                return;
-            case SDLK_2:
-                key[KEY_PRESS_2] = 1;
-                V[index] = KEY_PRESS_2;
-                return;
-            case SDLK_3:
-                key[KEY_PRESS_3] = 1;
-                V[index] = KEY_PRESS_3;
-                return;
-            case SDLK_4:
-                key[KEY_PRESS_4] = 1;
-                V[index] = KEY_PRESS_4;
-                return;
-            case SDLK_q:
-                key[KEY_PRESS_Q] = 1;
-                V[index] = KEY_PRESS_Q;
-                return;
-            case SDLK_w:
-                key[KEY_PRESS_W] = 1;
-                V[index] = KEY_PRESS_W;
-                return;
-            case SDLK_e:
-                key[KEY_PRESS_E] = 1;
-                V[index] = KEY_PRESS_E;
-                return;
-            case SDLK_r:
-                key[KEY_PRESS_R] = 1;
-                V[index] = KEY_PRESS_R;
-                return;
-            case SDLK_a:
-                key[KEY_PRESS_A] = 1;
-                V[index] = KEY_PRESS_A;
-                return;
-            case SDLK_s:
-                key[KEY_PRESS_S] = 1;
-                V[index] = KEY_PRESS_S;
-                return;
-            case SDLK_d:
-                key[KEY_PRESS_D] = 1;
-                V[index] = KEY_PRESS_D;
-                return;
-            case SDLK_f:
-                key[KEY_PRESS_F] = 1;
-                V[index] = KEY_PRESS_F;
-                return;
-            case SDLK_z:
-                key[KEY_PRESS_Z] = 1;
-                V[index] = KEY_PRESS_Z;
-                return;
-            case SDLK_x:
-                key[KEY_PRESS_X] = 1;
-                V[index] = KEY_PRESS_X;
-                return;
-            case SDLK_c:
-                key[KEY_PRESS_C] = 1;
-                V[index] = KEY_PRESS_C;
-                return;
-            case SDLK_v:
-                key[KEY_PRESS_V] = 1;
-                V[index] = KEY_PRESS_V;
-                return;
-            }
-        }
+int wait_key() {
+    int no_key = 0xFF;
+    for (int index = 0; index < 16; index++) {
+        if (key[index] != 0)
+            return index;
     }
+    return no_key;
 }
