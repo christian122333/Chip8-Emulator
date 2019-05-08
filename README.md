@@ -1,11 +1,12 @@
 # CHIP-8 Emulator
 
-# PONG
+### PONG
 ![](pong.gif)
 
-# INVADERS
+### INVADERS
 ![](space_invaders.gif)
 
-# TETRIS
-![](tetris.gif)
+### TETRIS
+<img src="tetris.gif" width="620" height="310">
+
 
